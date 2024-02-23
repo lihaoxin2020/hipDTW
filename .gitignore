@@ -1,0 +1,9 @@
+*
+!*.*
+!*/
+
+!Makefile
+!build
+!run_tests
+*.out
+*.DS_Store

@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Check if a file name is provided as an argument
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <filename.cpp> or <filename.cu>"
+    exit 1
+fi
+
+FILENAME=$1
+EXTENSION="${FILENAME##*.}"
+# Extract the base name without the extension
+BASENAME=$(basename "$FILENAME" .$EXTENSION)
+
+if [ "$EXTENSION" = "cpp" ]; then
+    # Compile the C++ program with utils.h included
+    g++ -o "$BASENAME" "$FILENAME" -I.
+elif [ "$EXTENSION" = "cu" ]; then
+    if [ ! -d "libwb/build" ] 
+    then
+        cd libwb/
+        mkdir build
+        cd build/
+        cmake ..
+        make -j4
+        cd ../..
+    fi
+    echo "Libwb library build done"
+    # Compile the CUDA program
+    # nvcc -o "$BASENAME" "$FILENAME"
+    export PATH=/opt/rocm-5.7.1/hip/bin/:$PATH
+    hipcc $1 -L$PWD/libwb/build/ -o "$BASENAME" -I $PWD/libwb/ -std=c++11 -lwb
+else
+    echo "Unsupported file extension."
+    exit 1
+fi
+
+# Check if the compilation was successful
+if [ $? -eq 0 ]; then
+    echo "Compilation successful. Executable is named $BASENAME"
+else
+    echo "Compilation failed."
+fi
