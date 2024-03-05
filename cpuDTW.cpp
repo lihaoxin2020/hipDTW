@@ -3,7 +3,7 @@
 #include <random>
 
 #define REF_LENGTH 100000  // 100k
-#define QUERY_LENGTH 1024000 // 512 * 2k = 1,024k
+#define QUERY_LENGTH 2000 // 512 * 2k = 1,024k
 
 void _normalizeData(std::vector<float>& data, float& mean, float& stdDev) {
     float sum = 0.0;
@@ -39,11 +39,11 @@ int main() {
     std::vector<float> ref = _generateRandomFloats(-1, 1, REF_LENGTH, 42);
     std::vector<float> query = _generateRandomFloats(58, 120, QUERY_LENGTH, 42);
 
-    std::string refFilename = "reference.bin";
-    // Write to file
-    writeDataToFile(refFilename, ref);
+    // std::string refFilename = "reference.bin";
+    // // Write to file
+    // writeDataToFile(refFilename, ref);
 
-    std::string queryFilename = "query.bin";
+    std::string queryFilename = "query2.bin";
     // Write to file
     writeDataToFile(queryFilename, query);
 
@@ -55,7 +55,7 @@ int main() {
     // }
     std::cout << "\nMean: " << mean << ", Standard Deviation: " << stdDev << std::endl;
     
-    std::string queryNormFilename = "query-norm.bin";
+    std::string queryNormFilename = "query2-norm.bin";
     // Write to file
     writeDataToFile(queryNormFilename, query);
 
