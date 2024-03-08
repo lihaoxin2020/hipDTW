@@ -3,22 +3,25 @@
 #include <random>
 
 #define REF_LENGTH 100000  // 100k
-#define QUERY_LENGTH 1024000 // 512 * 2k = 1,024k
+#define BATCH_SIZE 512
+#define QUERY_LENGTH 2000
 
-void _normalizeData(std::vector<float>& data, float& mean, float& stdDev) {
+// Calculate mean and stdDev in batch, and normalize given data. 
+void _normalizeData(float* data, const int size, float& mean, float& stdDev) {
     float sum = 0.0;
     float sumSq = 0.0;
-    for (auto value : data) {
+    for (int i = 0; i < size; i++) {
+        float value = data[i];
         sum += value;
         sumSq += value * value;
     }
-    mean = sum / data.size();
-    float variance = (sumSq / data.size()) - (mean * mean);
+    mean = sum / size;
+    float variance = (sumSq / size) - (mean * mean);
     stdDev = sqrt(variance);
 
     // Normalize the data
-    for (auto& value : data) {
-        value = (value - mean) / stdDev;
+    for (int i = 0; i < size; i++) {
+        data[i] = (data[i] - mean) / stdDev;
     }
 }
 
@@ -36,28 +39,48 @@ std::vector<float> _generateRandomFloats(float min, float max, int size, unsigne
 
 int main() {
     // Example usage
-    std::vector<float> ref = _generateRandomFloats(-1, 1, REF_LENGTH, 42);
-    std::vector<float> query = _generateRandomFloats(58, 120, QUERY_LENGTH, 42);
+    std::vector<float> ref = _generateRandomFloats(58, 120, REF_LENGTH, 42);
+    std::vector<float> query = _generateRandomFloats(58, 120, QUERY_LENGTH * BATCH_SIZE, 42);
 
-    std::string refFilename = "reference.bin";
+    float refMean, refStdDev;
+    _normalizeData(ref.data(), REF_LENGTH, refMean, refStdDev);
+    std::cout << "\nRef Mean: " << refMean << ", Standard Deviation: " << refStdDev << std::endl;
+
+    std::string refFilename = "reference.txt";
     // Write to file
     writeDataToFile(refFilename, ref);
 
-    std::string queryFilename = "query.bin";
+    std::string queryFilename = "query.txt";
     // Write to file
     writeDataToFile(queryFilename, query);
 
     float mean, stdDev;
-    _normalizeData(query, mean, stdDev);
+    // _normalizeData(query, mean, stdDev);
     // std::cout << "Normalized data: ";
     // for (auto value : query) {
     //     std::cout << value << " ";
     // }
-    std::cout << "\nMean: " << mean << ", Standard Deviation: " << stdDev << std::endl;
     
-    std::string queryNormFilename = "query-norm.bin";
+    for (int i = 0; i < BATCH_SIZE; i++) {
+        _normalizeData(query.data()+i*QUERY_LENGTH, QUERY_LENGTH, mean, stdDev);
+    }
+    std::cout << "Query Mean: " << mean << ", Standard Deviation: " << stdDev << std::endl;
+    
+    std::string queryNormFilename = "query-norm.txt";
     // Write to file
     writeDataToFile(queryNormFilename, query);
+
+    // CPU sDTW
+    std::vector<float> scores(BATCH_SIZE);
+    // Organize queries in a batch of 512
+    for (int i = 0; i < BATCH_SIZE; i++) {
+        std::vector<float> singleQuery = std::vector<float>(query.begin() + (i*QUERY_LENGTH), query.begin() + (i+1)*QUERY_LENGTH);
+        scores[i] = cpusDTW(singleQuery, ref);
+        std::cout << "Batch " << i << "score: " << scores[i] << std::endl;
+    }
+    std::string cpuResultFilename = "cpusDTW.txt";
+    // Write Results
+    writeDataToFile(cpuResultFilename, scores);
 
     return 0;
 }
