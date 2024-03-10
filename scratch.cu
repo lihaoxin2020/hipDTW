@@ -133,3 +133,33 @@ __global__ void sDTW(float* input, float* ref, int input_len, int ref_len, float
         }
     }
 }
+
+// Naive version
+// Input 512 queries of valuesPerQuery each. 
+// Output 512 means and std devs, and normalized queries in place.
+__global__ void computeMeansAndStdDevs(float* input, float* means, float* stdDevs, int valuesPerQuery) {
+    int queryIdx = blockIdx.x * blockDim.x + threadIdx.x;
+    int values = valuesPerQuery;
+
+    if (queryIdx < BLOCK_SIZE) {
+        float sum = 0;
+        for (int i = 0; i < values; ++i) {
+            sum += input[queryIdx * values + i];
+        }
+        float mean = sum / values;
+        means[queryIdx] = mean;
+
+        float sumSqDiff = 0;
+        for (int i = 0; i < values; ++i) {
+            float diff = input[queryIdx * values + i] - mean;
+            sumSqDiff += diff * diff;
+        }
+        float variance = sumSqDiff / values;
+        stdDevs[queryIdx] = sqrt(variance);
+
+        for (int i = 0; i < values; ++i) {
+            input[queryIdx * values + i] -= means[queryIdx];
+            input[queryIdx * values + i] /= stdDevs[queryIdx];
+        }
+    }
+}
